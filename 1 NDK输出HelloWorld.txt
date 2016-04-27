@@ -1,0 +1,95 @@
+
+【Android studio 创建及配置NDK项目】
+
+右键app -> open model setting -> SDK Location -> Android NDK location -> 选择NDK所在目录
+右键app ->new -> folder -> JNI Folder
+右键包名-> new class -> JniBridge
+	输入内容
+	package com.yanwanfu.hellojni;
+
+	public class JniBridge {
+		public native String getString();
+	}
+
+
+打开Studio的Terminal命令行终端 - > cd /app/src/main/java/
+输入：javah -d ../jni/ -jni com.yanwanfu.hellojni.JniBridge
+
+备注：
+-d 指定目录,../jni/ 是当前目录的父级目录下的jni目录
+-jni com.yanwanfu.hellojni.JniBridge 指定生成jni头文件的类
+
+此时成功在Jni目录成功生成一个com_yanwanfu_hellojni_JniBridge.h 的头文件
+使用同名com_yanwanfu_hellojni_JniBridge在Jni目录新建一个c/c++ Source file，
+不勾选Create associated header
+
+打开 Gradle Scripts/gradle.properties(Project Properties)
+在底部增加一行
+	android.useDeprecatedNdk=true  #开启弃用的Ndk
+
+打开buil.gradle(Module:app)，
+在defaultConfig中新增：
+	defaultConfig {	
+	   
+			ndk{
+				moduleName "hellojni"
+				abiFilters "x86"
+			}
+	}
+
+	
+【Android studio 运行NDK项目】
+
+打开com_yanwanfu_hellojni_JniBridge.h 头文件，复制
+
+	JNIEXPORT jstring JNICALL Java_com_yanwanfu_hellojni_JniBridge_getString
+			(JNIEnv *, jobject);
+			
+	粘贴到com_yanwanfu_hellojni_JniBridge.cpp
+	同时导入头文件
+	#include "com_yanwanfu_hellojni_JniBridge.h"
+	
+	........com_yanwanfu_hellojni_JniBridge.cpp文件清单.................
+	
+	JNIEXPORT jstring JNICALL Java_com_yanwanfu_hellojni_JniBridge_getString
+        (JNIEnv *env, jobject){
+
+    return env->NewStringUTF("Hello NDK");
+}
+		
+	...........................end.......................................	
+
+	
+打开JniBridge.java
+
+	package com.yanwanfu.hellojni;
+	public class JniBridge {
+		public static native String getString();
+		//添加静态模块(静态模块是程序已启动就执行的代码)
+		static {
+			System.loadLibrary("hellojni");
+		}
+	}
+
+打开MainActivity
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+		//添加输出
+        System.out.println(">>>>"+JniBridge.getString());
+    }
+
+运行模拟器
+输出 04-18 03:46:53.102 2415-2415/? I/System.out: >>>>Hello NDK
+
+【适配多种CPU架构】
+打开buil.gradle(Module:app)，
+在abiFilters后面追加不同平台名称即可：
+	defaultConfig {	
+	   
+			ndk{
+				moduleName "hellojni"
+				abiFilters "x86","armeabi"
+			}
+	}
